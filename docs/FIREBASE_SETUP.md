@@ -5,9 +5,9 @@ The classroom uses Firebase Authentication and Realtime Database. No VPS, Node.j
 ## One-time Firebase setup
 
 1. In **Authentication → Sign-in method**, enable **Email/Password** and **Anonymous**.
-2. In **Authentication → Users**, choose **Add user**. Create the teacher account with the email and a strong password. Give the login details to the teacher privately; do not put the password in the repository or send it in chat.
-3. Copy the teacher user's **UID** from the Users list.
-4. Open the repository's `database.rules.json`. Replace `TEACHER_UID_HERE` with that UID, keeping the UID inside the quotes. Paste the resulting JSON into **Realtime Database → Rules** and publish. Never use open/test rules such as `.read: true` or `.write: true`.
+2. In **Authentication → Users**, choose **Add user** and create the owner and teacher accounts with their email addresses and strong passwords. Share passwords privately; do not put them in the repository or send them in chat.
+3. Copy both users' **UIDs** from the Users list. The repository's `database.rules.json` currently allows these two UIDs to create classrooms.
+4. Paste the contents of `database.rules.json` into **Realtime Database → Rules** and publish. If you replace either account later, update the UID allowlist in that file first. Never use open/test rules such as `.read: true` or `.write: true`.
 5. In **Authentication → Settings → Authorized domains**, ensure the website hostname is listed. Add `localhost` / `127.0.0.1` for local tests and the GitHub Pages hostname when publishing.
 6. Open the website, enter the teacher email/password in **Live Classroom**, create a session, and test its QR/link in a second browser or device.
 

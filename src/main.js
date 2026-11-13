@@ -414,7 +414,7 @@ function resumeStoredClassroom() {
 function classroomErrorText(error) {
   if (error?.code === "auth/operation-not-allowed") return "В Firebase включите Authentication → Email/Password и Anonymous.";
   if (["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found"].includes(error?.code)) return "Неверная почта или пароль преподавателя.";
-  if (error?.code === "PERMISSION_DENIED" || error?.code === "database/permission-denied" || error?.message?.includes("PERMISSION_DENIED")) return "Проверьте правила базы и замените TEACHER_UID_HERE на UID аккаунта преподавателя.";
+  if (error?.code === "PERMISSION_DENIED" || error?.code === "database/permission-denied" || error?.message?.includes("PERMISSION_DENIED")) return "Проверьте правила базы и убедитесь, что UID аккаунта есть в списке преподавателей.";
   if (error?.code === "auth/network-request-failed" || error?.message?.includes("Failed to fetch")) return "Нет связи с Firebase. Проверьте подключение к интернету.";
   return error?.message || "Не удалось подключиться к Firebase.";
 }

@@ -6,7 +6,7 @@
       "$code": {
         "meta": {
           ".read": "auth != null && (data.child('ownerUid').val() == auth.uid || data.child('status').val() == 'open' || root.child('classrooms').child($code).child('participants').child(auth.uid).exists())",
-          ".write": "auth != null && ((!data.exists() && auth.uid == 'TEACHER_UID_HERE' && newData.child('ownerUid').val() == auth.uid) || data.child('ownerUid').val() == auth.uid)",
+          ".write": "auth != null && ((!data.exists() && (auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2') && newData.child('ownerUid').val() == auth.uid) || data.child('ownerUid').val() == auth.uid)",
           ".validate": "newData.hasChildren(['ownerUid', 'title', 'moduleId', 'moduleTitle', 'workId', 'workLabel', 'status', 'createdAt']) && newData.child('ownerUid').isString() && newData.child('title').isString() && newData.child('title').val().length <= 70 && newData.child('moduleId').isString() && newData.child('moduleTitle').isString() && newData.child('workId').isString() && newData.child('workLabel').isString() && (newData.child('status').val() == 'open' || newData.child('status').val() == 'closed') && newData.child('createdAt').isNumber()"
         },
         "participants": {
