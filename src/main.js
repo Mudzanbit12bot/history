@@ -96,6 +96,42 @@ function saveProgress() {
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 }
+async function getDeviceSummary() {
+  const userAgent = navigator.userAgent || "";
+  const hints = navigator.userAgentData;
+  let model = "";
+  let platform = hints?.platform || "";
+  let browser = hints?.brands?.find((brand) => !/not.?a.?brand/i.test(brand.brand))?.brand || "";
+  if (hints?.getHighEntropyValues) {
+    try {
+      model = (await hints.getHighEntropyValues(["model"])).model || "";
+    } catch {
+      model = "";
+    }
+  }
+  if (!model) {
+    if (/Android/i.test(userAgent)) {
+      model = userAgent.match(/Android\s[^;)]+;\s*([^;)]+)/i)?.[1]?.replace(/\s+Build\/.*$/i, "").trim() || "";
+      if (/^(?:[a-z]|k)$/i.test(model)) model = "";
+    } else if (/iPhone/i.test(userAgent)) {
+      model = "iPhone";
+    } else if (/iPad/i.test(userAgent)) {
+      model = "iPad";
+    }
+  }
+  if (!platform) {
+    platform = /Android/i.test(userAgent) ? "Android"
+      : /iPhone|iPad|iPod/i.test(userAgent) ? "iOS"
+        : /Windows/i.test(userAgent) ? "Windows"
+          : /Mac OS/i.test(userAgent) ? "macOS"
+            : /Linux/i.test(userAgent) ? "Linux" : "";
+  }
+  if (!browser) {
+    const match = userAgent.match(/(Edg|OPR|SamsungBrowser|Firefox|Chrome|CriOS|Version)\/([\d.]+)/);
+    browser = match ? `${match[1] === "Version" ? "Safari" : match[1]} ${match[2].split(".")[0]}` : "";
+  }
+  return [model, platform, browser].filter(Boolean).join(" · ").slice(0, 160) || "Модель устройства не определена";
+}
 function normalize(value = "") {
   return String(value).trim().toLowerCase().replaceAll("ё", "е").replace(/[^a-zа-я0-9]+/gi, "");
 }
@@ -445,7 +481,10 @@ function sessionDisplay(session) {
       const reset = response && !annulled && meta.status === "open"
         ? `<button class="button button-outline button-small" data-action="annul-classroom-attempt" data-uid="${escapeHtml(uid)}">АННУЛИРОВАТЬ · РАЗРЕШИТЬ ПОВТОР</button>`
         : "";
-      return `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(participant.name)}</strong><span>${status}</span></div><p>${response ? escapeHtml(response.text) : "Ответ появится здесь после отправки учеником."}</p>${reset}</article>`;
+      const device = participant.device
+        ? `<p class="classroom-device">УСТРОЙСТВО · ${escapeHtml(participant.device)}</p>`
+        : `<p class="classroom-device">УСТРОЙСТВО · НЕ ОПРЕДЕЛЕНО</p>`;
+      return `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(participant.name)}</strong><span>${status}</span></div>${device}<p>${response ? escapeHtml(response.text) : "Ответ появится здесь после отправки учеником."}</p>${reset}</article>`;
     }).join("")
     : `<p class="small-copy">Когда ученики подключатся, их имена появятся здесь.</p>`;
   return `<div class="class-session-head"><div><div class="eyebrow">FIREBASE REALTIME SESSION</div><h3>${escapeHtml(meta.title || "Загрузка занятия…")}</h3><p>${escapeHtml(meta.moduleTitle || "")} · ${escapeHtml(meta.workLabel || "")}</p></div><span class="status-chip">${meta.status === "closed" ? "ЗАКРЫТО" : "АКТИВНО"}</span></div><div class="session-content"><div class="qr-wrap"><canvas id="qr-canvas" width="220" height="220" aria-label="QR-код ссылки на занятие"></canvas><div id="qr-note" class="qr-note">Генерация QR…</div></div><div class="session-details"><span>КОД ПОДКЛЮЧЕНИЯ</span><strong class="session-code">${escapeHtml(session.code)}</strong><button class="button button-outline button-small" data-action="copy-link">КОПИРОВАТЬ ССЫЛКУ</button><button class="text-button" data-action="download-qr">Скачать QR-код <span>↓</span></button><div class="session-url">${escapeHtml(session.url)}</div><div class="local-participants"><span>УЧАСТНИКИ</span><b>${participants.length}</b></div></div></div><section class="classroom-responses"><div class="eyebrow">ОТВЕТЫ УЧЕНИКОВ</div>${roster}</section><div class="session-disclaimer">Ответы и имена синхронизируются через Firebase Realtime Database. Не отправляйте персональные или чувствительные данные.</div><button class="button button-quiet" data-action="close-session" ${meta.status === "closed" ? "disabled" : ""}>ЗАКРЫТЬ ЗАНЯТИЕ</button>`;
@@ -479,7 +518,7 @@ function studentClassroomPage(session) {
 function joinPage() {
   const code = state.joinCode.toUpperCase();
   return `${pageHeading("LIVE CLASSROOM / УЧЕНИК", "Подключение к занятию", "Введите имя или псевдоним. Регистрация и контактные данные не нужны.")}
-    <div class="join-card panel"><div class="join-mark">H://</div><div class="eyebrow">КОД СЕССИИ</div><div class="join-code">${escapeHtml(code)}</div><div class="classroom-warning"><span>i</span><p>Имя и отправленный ответ будут видны преподавателю и сохранятся в Firebase, пока занятие открыто.</p></div><form id="join-form"><label class="form-field"><span>ИМЯ ИЛИ ПСЕВДОНИМ</span><input name="student-name" required maxlength="30" autocomplete="nickname" placeholder="Например, Алексей" /></label><button class="button button-primary button-full">ПОДКЛЮЧИТЬСЯ <span>→</span></button></form><button class="text-button" data-action="leave-join">← К АРХИВУ</button></div>`;
+    <div class="join-card panel"><div class="join-mark">H://</div><div class="eyebrow">КОД СЕССИИ</div><div class="join-code">${escapeHtml(code)}</div><div class="classroom-warning"><span>i</span><p>Преподавателю будут переданы ваше имя и доступная браузеру сводка устройства (модель, ОС и браузер). Точная модель может быть скрыта. Данные не видны другим ученикам и хранятся в Firebase, пока преподаватель не удалит запись занятия. IMEI/серийные номера, IP-адрес, геолокация и отпечаток устройства не собираются.</p></div><form id="join-form"><label class="form-field"><span>ИМЯ ИЛИ ПСЕВДОНИМ</span><input name="student-name" required maxlength="30" autocomplete="nickname" placeholder="Например, Алексей" /></label><label class="device-consent"><input name="device-consent" type="checkbox" required /><span>Я понимаю, что имя и сводка устройства будут переданы преподавателю и сохранены в Firebase для этого занятия.</span></label><button class="button button-primary button-full">ПОДКЛЮЧИТЬСЯ <span>→</span></button></form><button class="text-button" data-action="leave-join">← К АРХИВУ</button></div>`;
 }
 function resultsPage() {
   const attempts = progress.attempts;
@@ -979,9 +1018,13 @@ root.addEventListener("submit", async (event) => {
   }
   if (form.id === "join-form") {
     try {
+      if (!form.elements["device-consent"].checked) {
+        toast("Подтвердите отправку имени и сведений об устройстве.");
+        return;
+      }
       const { joinClassroom } = await import("./firebase-classroom.js");
       const name = form.elements["student-name"].value.trim();
-      const joined = await joinClassroom(state.joinCode.toUpperCase(), name);
+      const joined = await joinClassroom(state.joinCode.toUpperCase(), name, await getDeviceSummary());
       state.classroom = {
         ...joined,
         role: "student",

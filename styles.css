@@ -191,6 +191,8 @@ a { color: inherit; text-decoration: none; }
 .select-label select, .form-field input, .form-field select, .form-field textarea, .text-answer input, .clue-text input, .match-row select { width: 100%; min-height: 36px; border: 1px solid rgba(130,160,200,.17); border-radius: 3px; padding: 0 10px; background: #0b101b; color: var(--text); font: 11px "Manrope", sans-serif; }
 .form-field textarea { resize: vertical; padding: 10px; line-height: 1.5; }
 .select-label select { min-width: 260px; margin-top: 5px; }
+.device-consent { display: flex; align-items: flex-start; gap: 9px; color: #aab5c5; font: 10px "Manrope", sans-serif; line-height: 1.55; }
+.device-consent input { flex: 0 0 auto; margin: 2px 0 0; accent-color: var(--cyan); }
 .tier-selector { display: flex; gap: 7px; }
 .tier-button { min-width: 112px; display: grid; gap: 5px; padding: 9px 11px; border: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
 .tier-button small { color: #77859a; font: 8px "DM Mono", monospace; }
@@ -370,6 +372,7 @@ a { color: inherit; text-decoration: none; }
 .classroom-response { padding: 10px 0; border-top: 1px solid var(--line); }
 .classroom-response-head { display: flex; justify-content: space-between; gap: 12px; color: #cbd6e6; font-size: 10px; }
 .classroom-response-head span, .classroom-submitted { color: var(--cyan); font: 8px "DM Mono", monospace; }
+.classroom-device { margin: 6px 0 0; color: #7e8ba0; font: 8px "DM Mono", monospace; overflow-wrap: anywhere; }
 .classroom-response p { margin: 7px 0 0; color: #9caac0; font-size: 11px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .classroom-response > .button { margin-top: 8px; max-width: 100%; white-space: normal; text-align: left; }
 .classroom-submitted { margin: 10px 0; }

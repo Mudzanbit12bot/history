@@ -88,7 +88,7 @@ export async function signOutTeacher() {
   await services.authSdk.signOut(services.auth);
 }
 
-export async function joinClassroom(code, name) {
+export async function joinClassroom(code, name, deviceSummary) {
   const services = await getServices();
   const user = await getSignedInUser(services);
   const { database, databaseSdk } = services;
@@ -99,6 +99,8 @@ export async function joinClassroom(code, name) {
 
   await databaseSdk.set(databaseSdk.ref(database, `classrooms/${code}/participants/${user.uid}`), {
     name: name.trim().slice(0, 30),
+    device: String(deviceSummary).slice(0, 160),
+    deviceConsentAt: Date.now(),
     joinedAt: Date.now()
   });
   const responseSnapshot = await databaseSdk.get(databaseSdk.ref(database, `classrooms/${code}/responses/${user.uid}`));

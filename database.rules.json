@@ -14,7 +14,7 @@
           "$uid": {
             ".read": "auth != null && (auth.uid == $uid || root.child('classrooms').child($code).child('meta').child('ownerUid').val() == auth.uid)",
             ".write": "auth != null && (root.child('classrooms').child($code).child('meta').child('ownerUid').val() == auth.uid || (auth.uid == $uid && root.child('classrooms').child($code).child('meta').child('status').val() == 'open'))",
-            ".validate": "newData.hasChildren(['name', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 30 && newData.child('joinedAt').isNumber()"
+            ".validate": "newData.hasChildren(['name', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 30 && newData.child('joinedAt').isNumber() && (!newData.child('device').exists() || (newData.child('device').isString() && newData.child('device').val().length <= 160 && newData.child('deviceConsentAt').isNumber())) && (!newData.child('deviceConsentAt').exists() || (newData.child('device').exists() && newData.child('deviceConsentAt').isNumber()))"
           }
         },
         "responses": {
