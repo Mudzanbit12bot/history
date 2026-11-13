@@ -101,7 +101,8 @@ export async function joinClassroom(code, name) {
     name: name.trim().slice(0, 30),
     joinedAt: Date.now()
   });
-  return { uid: user.uid, meta };
+  const responseSnapshot = await databaseSdk.get(databaseSdk.ref(database, `classrooms/${code}/responses/${user.uid}`));
+  return { uid: user.uid, meta, response: responseSnapshot.exists() ? responseSnapshot.val() : null };
 }
 
 export function watchClassroom(code, role, uid, handlers) {
@@ -140,25 +141,40 @@ export function watchClassroom(code, role, uid, handlers) {
 export async function submitResponse(code, uid, text) {
   const services = await getServices();
   await getSignedInUser(services);
-  await services.databaseSdk.set(
-    services.databaseSdk.ref(services.database, `classrooms/${code}/responses/${uid}`),
-    { text: text.trim().slice(0, 2000), submittedAt: Date.now() }
-  );
+  const responseRef = services.databaseSdk.ref(services.database, `classrooms/${code}/responses/${uid}`);
+  const result = await services.databaseSdk.runTransaction(responseRef, (current) => {
+    if (current && current.annulled !== true) return;
+    return { text: text.trim().slice(0, 2000), submittedAt: Date.now() };
+  }, { applyLocally: false });
+  if (!result.committed) throw new Error("CLASSROOM_ATTEMPT_EXISTS");
 }
 
 export async function submitClassroomResult(code, uid, result) {
   const services = await getServices();
   await getSignedInUser(services);
-  await services.databaseSdk.set(
-    services.databaseSdk.ref(services.database, `classrooms/${code}/responses/${uid}`),
-    {
+  const responseRef = services.databaseSdk.ref(services.database, `classrooms/${code}/responses/${uid}`);
+  const transaction = await services.databaseSdk.runTransaction(responseRef, (current) => {
+    if (current && current.annulled !== true) return;
+    return {
       activity: result.activity,
       score: result.score,
       total: result.total,
       text: result.text,
       submittedAt: Date.now()
-    }
-  );
+    };
+  }, { applyLocally: false });
+  if (!transaction.committed) throw new Error("CLASSROOM_ATTEMPT_EXISTS");
+}
+
+export async function annulClassroomAttempt(code, uid) {
+  const services = await getServices();
+  await getSignedInUser(services);
+  const responseRef = services.databaseSdk.ref(services.database, `classrooms/${code}/responses/${uid}`);
+  const transaction = await services.databaseSdk.runTransaction(responseRef, (current) => {
+    if (!current || current.annulled === true) return;
+    return { ...current, annulled: true, annulledAt: Date.now() };
+  }, { applyLocally: false });
+  if (!transaction.committed) throw new Error("CLASSROOM_ATTEMPT_NOT_FOUND");
 }
 
 export async function closeClassroom(code) {

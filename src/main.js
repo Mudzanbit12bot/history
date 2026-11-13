@@ -412,6 +412,8 @@ function resumeStoredClassroom() {
   }
 }
 function classroomErrorText(error) {
+  if (error?.message === "CLASSROOM_ATTEMPT_NOT_FOUND") return "Нет активной попытки для аннулирования.";
+  if (error?.message === "CLASSROOM_ATTEMPT_EXISTS") return "Ученик уже отправил попытку.";
   if (error?.code === "auth/operation-not-allowed") return "В Firebase включите Authentication → Email/Password и Anonymous.";
   if (["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found"].includes(error?.code)) return "Неверная почта или пароль преподавателя.";
   if (error?.code === "PERMISSION_DENIED" || error?.code === "database/permission-denied" || error?.message?.includes("PERMISSION_DENIED")) return "Проверьте правила базы и убедитесь, что UID аккаунта есть в списке преподавателей.";
@@ -436,7 +438,15 @@ function sessionDisplay(session) {
   const participants = Object.entries(session.participants || {});
   const responses = session.responses || {};
   const roster = participants.length
-    ? participants.map(([uid, participant]) => `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(participant.name)}</strong><span>${responses[uid] ? responses[uid].score !== undefined ? `${responses[uid].score} / ${responses[uid].total}` : "ОТВЕТ ПОЛУЧЕН" : "ОЖИДАЕТ ОТВЕТА"}</span></div><p>${responses[uid] ? escapeHtml(responses[uid].text) : "Ответ появится здесь после отправки учеником."}</p></article>`).join("")
+    ? participants.map(([uid, participant]) => {
+      const response = responses[uid];
+      const annulled = response?.annulled === true;
+      const status = annulled ? "АННУЛИРОВАНО · МОЖНО ПОВТОРИТЬ" : response ? response.score !== undefined ? `${response.score} / ${response.total}` : "ОТВЕТ ПОЛУЧЕН" : "ОЖИДАЕТ ОТВЕТА";
+      const reset = response && !annulled && meta.status === "open"
+        ? `<button class="button button-outline button-small" data-action="annul-classroom-attempt" data-uid="${escapeHtml(uid)}">АННУЛИРОВАТЬ · РАЗРЕШИТЬ ПОВТОР</button>`
+        : "";
+      return `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(participant.name)}</strong><span>${status}</span></div><p>${response ? escapeHtml(response.text) : "Ответ появится здесь после отправки учеником."}</p>${reset}</article>`;
+    }).join("")
     : `<p class="small-copy">Когда ученики подключатся, их имена появятся здесь.</p>`;
   return `<div class="class-session-head"><div><div class="eyebrow">FIREBASE REALTIME SESSION</div><h3>${escapeHtml(meta.title || "Загрузка занятия…")}</h3><p>${escapeHtml(meta.moduleTitle || "")} · ${escapeHtml(meta.workLabel || "")}</p></div><span class="status-chip">${meta.status === "closed" ? "ЗАКРЫТО" : "АКТИВНО"}</span></div><div class="session-content"><div class="qr-wrap"><canvas id="qr-canvas" width="220" height="220" aria-label="QR-код ссылки на занятие"></canvas><div id="qr-note" class="qr-note">Генерация QR…</div></div><div class="session-details"><span>КОД ПОДКЛЮЧЕНИЯ</span><strong class="session-code">${escapeHtml(session.code)}</strong><button class="button button-outline button-small" data-action="copy-link">КОПИРОВАТЬ ССЫЛКУ</button><button class="text-button" data-action="download-qr">Скачать QR-код <span>↓</span></button><div class="session-url">${escapeHtml(session.url)}</div><div class="local-participants"><span>УЧАСТНИКИ</span><b>${participants.length}</b></div></div></div><section class="classroom-responses"><div class="eyebrow">ОТВЕТЫ УЧЕНИКОВ</div>${roster}</section><div class="session-disclaimer">Ответы и имена синхронизируются через Firebase Realtime Database. Не отправляйте персональные или чувствительные данные.</div><button class="button button-quiet" data-action="close-session" ${meta.status === "closed" ? "disabled" : ""}>ЗАКРЫТЬ ЗАНЯТИЕ</button>`;
 }
@@ -444,15 +454,27 @@ function studentClassroomPage(session) {
   const meta = session.meta || {};
   const error = session.error ? `<div class="classroom-warning"><span>!</span><p>${escapeHtml(session.error)}</p></div>` : "";
   const closed = meta.status === "closed";
-  const result = session.response?.score !== undefined ? `<div class="feedback-box ${session.response.score === session.response.total ? "correct" : "incorrect"}"><strong>РЕЗУЛЬТАТ: ${session.response.score} / ${session.response.total}</strong><p>Результат автоматической проверки отправлен преподавателю.</p></div>` : "";
+  const annulled = session.response?.annulled === true;
+  const completed = Boolean(session.response && !annulled);
+  const result = completed && session.response.score !== undefined ? `<div class="feedback-box ${session.response.score === session.response.total ? "correct" : "incorrect"}"><strong>РЕЗУЛЬТАТ: ${session.response.score} / ${session.response.total}</strong><p>Результат отправлен преподавателю. Повторное прохождение возможно только после аннулирования попытки преподавателем.</p></div>` : "";
   const activity = {
     test: "НАЧАТЬ ТЕСТ · БАЗОВЫЙ УРОВЕНЬ",
     "test-2": "НАЧАТЬ ТЕСТ · УВЕРЕННЫЙ УРОВЕНЬ",
     crossword: "ОТКРЫТЬ КРОССВОРД",
     game: "НАЧАТЬ ИГРУ"
   }[meta.workId] || "НАЧАТЬ ЗАДАНИЕ";
+  const status = closed
+    ? `<div class="classroom-warning"><span>!</span><p>Преподаватель закрыл занятие. Новые ответы больше не принимаются.</p></div>`
+    : completed
+      ? ""
+      : annulled
+        ? `<div class="classroom-warning"><span>i</span><p>Предыдущая попытка аннулирована преподавателем. Вы можете пройти задание ещё раз.</p></div>`
+        : `<p class="small-copy">Выполните задание. После отправки результата повторное прохождение будет закрыто, пока преподаватель не аннулирует попытку.</p>`;
+  const startButton = !closed && !completed
+    ? `<button class="button button-primary button-full" data-action="start-classroom-work">${activity} <span>→</span></button>`
+    : "";
   return `${pageHeading("LIVE CLASSROOM / УЧЕНИК", escapeHtml(meta.title || "Занятие"), `${escapeHtml(meta.moduleTitle || "")} · ${escapeHtml(meta.workLabel || "")}`)}${error}
-    <section class="join-card panel"><div class="eyebrow">ВЫ ПОДКЛЮЧЕНЫ К ЗАНЯТИЮ</div><h3>${escapeHtml(session.name)}</h3>${result}${closed ? `<div class="classroom-warning"><span>!</span><p>Преподаватель закрыл занятие. Новые ответы больше не принимаются.</p></div>` : `<p class="small-copy">Выполните задание. Тесты, кроссворд и игра проверяются автоматически; результат появится у преподавателя.</p><button class="button button-primary button-full" data-action="start-classroom-work">${activity} <span>→</span></button>`}<button class="text-button" data-action="leave-join">ОТКЛЮЧИТЬСЯ</button></section>`;
+    <section class="join-card panel"><div class="eyebrow">ВЫ ПОДКЛЮЧЕНЫ К ЗАНЯТИЮ</div><h3>${escapeHtml(session.name)}</h3>${result}${status}${startButton}<button class="text-button" data-action="leave-join">ОТКЛЮЧИТЬСЯ</button></section>`;
 }
 function joinPage() {
   const code = state.joinCode.toUpperCase();
@@ -512,6 +534,12 @@ function saveAttempt(moduleId, tier, score, total, manualTotal = 0) {
 function submitLiveScore(score, total) {
   const session = state.classroom;
   if (session?.role !== "student" || !["test", "test-2", "crossword", "game"].includes(session.currentActivity)) return;
+  if (session.submittingAttempt) return;
+  if (session.response && session.response.annulled !== true) {
+    toast("Попытка уже отправлена. Для повтора преподаватель должен её аннулировать.");
+    return;
+  }
+  session.submittingAttempt = true;
   const result = {
     activity: session.currentActivity,
     score,
@@ -526,7 +554,10 @@ function submitLiveScore(score, total) {
         toast("Результат отправлен преподавателю.");
       }
     })
-    .catch((error) => toast(classroomErrorText(error)));
+    .catch((error) => toast(error?.message === "CLASSROOM_ATTEMPT_EXISTS"
+      ? "Попытка уже отправлена. Для повтора преподаватель должен её аннулировать."
+      : classroomErrorText(error)))
+    .finally(() => { session.submittingAttempt = false; });
 }
 function quizSubmit(form) {
   const moduleId = form.dataset.module;
@@ -819,6 +850,19 @@ root.addEventListener("click", async (event) => {
     catch { toast(state.classroom.url); }
   }
   if (action === "download-qr") downloadQr();
+  if (action === "annul-classroom-attempt" && state.classroom?.role === "teacher") {
+    const uid = target.dataset.uid;
+    const participant = state.classroom.participants?.[uid];
+    if (!participant || state.classroom.meta?.status !== "open") return;
+    if (!window.confirm(`Аннулировать попытку ученика «${participant.name}» и разрешить повторное прохождение задания?`)) return;
+    try {
+      const { annulClassroomAttempt } = await import("./firebase-classroom.js");
+      await annulClassroomAttempt(state.classroom.code, uid);
+      toast(`Попытка ученика «${participant.name}» аннулирована. Повтор разрешён.`);
+    } catch (error) {
+      toast(classroomErrorText(error));
+    }
+  }
   if (action === "close-session" && state.classroom?.role === "teacher") {
     try {
       const { closeClassroom } = await import("./firebase-classroom.js");

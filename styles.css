@@ -371,6 +371,7 @@ a { color: inherit; text-decoration: none; }
 .classroom-response-head { display: flex; justify-content: space-between; gap: 12px; color: #cbd6e6; font-size: 10px; }
 .classroom-response-head span, .classroom-submitted { color: var(--cyan); font: 8px "DM Mono", monospace; }
 .classroom-response p { margin: 7px 0 0; color: #9caac0; font-size: 11px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.classroom-response > .button { margin-top: 8px; max-width: 100%; white-space: normal; text-align: left; }
 .classroom-submitted { margin: 10px 0; }
 .class-session-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
 .class-session-head h3 { margin-top: 6px; }
