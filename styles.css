@@ -378,6 +378,7 @@ a { color: inherit; text-decoration: none; }
 .classroom-response-head span, .classroom-submitted { color: var(--cyan); font: 8px "DM Mono", monospace; }
 .classroom-device { margin: 6px 0 0; color: #7e8ba0; font: 8px "DM Mono", monospace; overflow-wrap: anywhere; }
 .classroom-response p { margin: 7px 0 0; color: #9caac0; font-size: 11px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.session-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .release-panel { margin: 0 0 12px; }
 .release-panel .small-copy { margin: 8px 0 4px; }
 .classroom-response > .button { margin-top: 8px; max-width: 100%; white-space: normal; text-align: left; }

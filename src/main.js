@@ -580,7 +580,10 @@ function sessionDisplay(session) {
       return `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(participant.name)}</strong><span>${status}</span></div>${device}<p>${response ? escapeHtml(response.text) : "Ответ появится здесь после отправки учеником."}</p>${reset}</article>`;
     }).join("")
     : `<p class="small-copy">Когда ученики подключатся, их имена появятся здесь.</p>`;
-  return `<div class="class-session-head"><div><div class="eyebrow">FIREBASE REALTIME SESSION</div><h3>${escapeHtml(meta.title || "Загрузка занятия…")}</h3><p>${escapeHtml(meta.moduleTitle || "")} · ${escapeHtml(meta.workLabel || "")}</p></div><span class="status-chip">${meta.status === "closed" ? "ЗАКРЫТО" : "АКТИВНО"}</span></div><div class="session-content"><div class="qr-wrap"><canvas id="qr-canvas" width="220" height="220" aria-label="QR-код ссылки на занятие"></canvas><div id="qr-note" class="qr-note">Генерация QR…</div></div><div class="session-details"><span>КОД ПОДКЛЮЧЕНИЯ</span><strong class="session-code">${escapeHtml(session.code)}</strong><button class="button button-outline button-small" data-action="copy-link">КОПИРОВАТЬ ССЫЛКУ</button><button class="text-button" data-action="download-qr">Скачать QR-код <span>↓</span></button><div class="session-url">${escapeHtml(session.url)}</div><div class="local-participants"><span>УЧАСТНИКИ</span><b>${participants.length}</b></div></div></div><section class="classroom-responses"><div class="eyebrow">ОТВЕТЫ УЧЕНИКОВ</div>${roster}</section><div class="session-disclaimer">Ответы и имена синхронизируются через Firebase Realtime Database. Не отправляйте персональные или чувствительные данные.</div><button class="button button-quiet" data-action="close-session" ${meta.status === "closed" ? "disabled" : ""}>ЗАКРЫТЬ ЗАНЯТИЕ</button>`;
+  const deleteButton = meta.status === "closed"
+    ? `<button class="button button-danger" data-action="delete-classroom">УДАЛИТЬ ЗАНЯТИЕ ИЗ САЙТА И БАЗЫ</button>`
+    : "";
+  return `<div class="class-session-head"><div><div class="eyebrow">FIREBASE REALTIME SESSION</div><h3>${escapeHtml(meta.title || "Загрузка занятия…")}</h3><p>${escapeHtml(meta.moduleTitle || "")} · ${escapeHtml(meta.workLabel || "")}</p></div><span class="status-chip">${meta.status === "closed" ? "ЗАКРЫТО" : "АКТИВНО"}</span></div><div class="session-content"><div class="qr-wrap"><canvas id="qr-canvas" width="220" height="220" aria-label="QR-код ссылки на занятие"></canvas><div id="qr-note" class="qr-note">Генерация QR…</div></div><div class="session-details"><span>КОД ПОДКЛЮЧЕНИЯ</span><strong class="session-code">${escapeHtml(session.code)}</strong><button class="button button-outline button-small" data-action="copy-link">КОПИРОВАТЬ ССЫЛКУ</button><button class="text-button" data-action="download-qr">Скачать QR-код <span>↓</span></button><div class="session-url">${escapeHtml(session.url)}</div><div class="local-participants"><span>УЧАСТНИКИ</span><b>${participants.length}</b></div></div></div><section class="classroom-responses"><div class="eyebrow">ОТВЕТЫ УЧЕНИКОВ</div>${roster}</section><div class="session-disclaimer">Ответы и имена синхронизируются через Firebase Realtime Database. Не отправляйте персональные или чувствительные данные.</div><div class="session-actions"><button class="button button-quiet" data-action="close-session" ${meta.status === "closed" ? "disabled" : ""}>ЗАКРЫТЬ ЗАНЯТИЕ</button>${deleteButton}</div>`;
 }
 function studentClassroomPage(session) {
   const meta = session.meta || {};
@@ -1057,6 +1060,26 @@ root.addEventListener("click", async (event) => {
       state.classroom.meta.status = "closed";
       render();
       toast("Занятие закрыто.");
+    } catch (error) {
+      toast(classroomErrorText(error));
+    }
+  }
+  if (action === "delete-classroom" && state.classroom?.role === "teacher") {
+    const code = state.classroom.code;
+    if (state.classroom.meta?.status !== "closed") {
+      toast("Сначала закройте занятие.");
+      return;
+    }
+    if (!window.confirm(`Удалить закрытое занятие «${state.classroom.meta.title || code}» и все сохранённые ответы?`)) return;
+    if (!window.confirm("Подтвердите ещё раз: эту запись удалить полностью без возможности восстановления.")) return;
+    try {
+      const { deleteClassroom } = await import("./firebase-classroom.js?v=roomdelete");
+      await deleteClassroom(code);
+      stopClassroomWatch();
+      state.classroom = null;
+      localStorage.removeItem(LIVE_KEY);
+      render();
+      toast("Занятие удалено из сайта и Firebase.");
     } catch (error) {
       toast(classroomErrorText(error));
     }

@@ -378,3 +378,18 @@ export async function closeClassroom(code) {
     { status: "closed" }
   );
 }
+
+export async function deleteClassroom(code) {
+  const services = await getServices();
+  const user = await getSignedInUser(services);
+  if (user.uid !== ADMIN_UID && user.uid !== TEACHER_UID) throw new Error("CLASSROOM_FORBIDDEN");
+  const metaSnapshot = await services.databaseSdk.get(
+    services.databaseSdk.ref(services.database, `classrooms/${code}/meta`)
+  );
+  if (!metaSnapshot.exists()) throw new Error("CLASSROOM_NOT_FOUND");
+  const meta = metaSnapshot.val();
+  if (meta.ownerUid !== user.uid) throw new Error("CLASSROOM_FORBIDDEN");
+  await services.databaseSdk.remove(
+    services.databaseSdk.ref(services.database, `classrooms/${code}`)
+  );
+}
