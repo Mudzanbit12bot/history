@@ -205,11 +205,11 @@ function homePage() {
   const progressPct = Math.round(done / modules.length * 100);
   const latestAnnouncements = Object.values(state.announcements).sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
   const announcement = latestAnnouncements[0] || {
-    version: "2.0",
-    title: "Управление классами и учениками",
-    details: "Добавлены создание классов, индивидуальные логины и пароли учеников, блокировка доступа ученика и админ-панель для публикации обновлений.",
+    version: "2.1",
+    title: "Управление классами, учениками и занятиями",
+    details: "Добавлены добавление и удаление классов и учеников, блокировка и разблокировка учеников, сохранение логинов, профиль входа ученика и удаление закрытых занятий вместе с их ответами.",
     publishedBy: "Владелец сайта · Рябчук Иван Андреевич",
-    publishedDate: "23.11.2026 · 14:23 · Иркутск, UTC+8",
+    publishedDate: "23.11.2026 · 15:56 · Иркутск, UTC+8",
     publishedAt: Date.now()
   };
   const publishedDate = announcement.publishedDate || (announcement.publishedAt
