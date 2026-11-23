@@ -145,7 +145,8 @@ export async function createStudentAccount({ login, password, name, classId }) {
   if (!name.trim() || !login.trim() || password.length < 6) throw new Error("CHECK_STUDENT_FIELDS");
 
   const appName = `student-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const app = services.appSdk.initializeApp(firebaseConfig, appName);
+  const appSdk = services.appSdk || await import(`${firebaseSdk}/firebase-app.js`);
+  const app = appSdk.initializeApp(firebaseConfig, appName);
   const studentAuth = services.authSdk.getAuth(app);
   try {
     const credential = await services.authSdk.createUserWithEmailAndPassword(studentAuth, loginToEmail(login), password);
@@ -161,7 +162,7 @@ export async function createStudentAccount({ login, password, name, classId }) {
     await services.authSdk.signOut(studentAuth);
     return { uid, name: name.trim(), login: login.trim(), classId };
   } finally {
-    await services.appSdk.deleteApp(app);
+    await appSdk.deleteApp(app);
   }
 }
 

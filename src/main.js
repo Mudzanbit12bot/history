@@ -413,7 +413,7 @@ async function watchCurrentClassroom() {
   stopClassroomWatch();
   classroomSubscriptionKey = key;
   try {
-    const { watchClassroom } = await import("./firebase-classroom.js");
+    const { watchClassroom } = await import("./firebase-classroom.js?v=studentfix");
     if (!state.classroom || `${state.classroom.role}:${state.classroom.code}:${state.classroom.uid}` !== key) return;
     classroomUnsubscribe = watchClassroom(session.code, session.role, session.uid, {
       onMeta: (meta) => {
@@ -648,7 +648,7 @@ function submitLiveScore(score, total) {
     total,
     text: `Автопроверка: ${score} из ${total}`
   };
-  import("./firebase-classroom.js")
+  import("./firebase-classroom.js?v=studentfix")
     .then(({ submitClassroomResult }) => submitClassroomResult(session.code, session.uid, result))
     .then(() => {
       if (state.classroom === session) {
@@ -826,7 +826,7 @@ root.addEventListener("click", async (event) => {
   }
   if (action === "teacher-signout") {
     try {
-      const { signOutTeacher } = await import("./firebase-classroom.js");
+      const { signOutTeacher } = await import("./firebase-classroom.js?v=studentfix");
       await signOutTeacher();
       stopClassroomWatch();
       state.teacher = null;
@@ -961,7 +961,7 @@ root.addEventListener("click", async (event) => {
     if (!student) return;
     if (!window.confirm(`${active ? "Разблокировать" : "Заблокировать"} ученика «${student.name}»?`)) return;
     try {
-      const { setStudentActive } = await import("./firebase-classroom.js");
+      const { setStudentActive } = await import("./firebase-classroom.js?v=studentfix");
       await setStudentActive(uid, active);
       state.managed.students[uid].active = active;
       if (!active) state.managed.students[uid].blockedAt = Date.now();
@@ -978,7 +978,7 @@ root.addEventListener("click", async (event) => {
     if (!participant || state.classroom.meta?.status !== "open") return;
     if (!window.confirm(`Аннулировать попытку ученика «${participant.name}» и разрешить повторное прохождение задания?`)) return;
     try {
-      const { annulClassroomAttempt } = await import("./firebase-classroom.js");
+      const { annulClassroomAttempt } = await import("./firebase-classroom.js?v=studentfix");
       await annulClassroomAttempt(state.classroom.code, uid);
       toast(`Попытка ученика «${participant.name}» аннулирована. Повтор разрешён.`);
     } catch (error) {
@@ -987,7 +987,7 @@ root.addEventListener("click", async (event) => {
   }
   if (action === "close-session" && state.classroom?.role === "teacher") {
     try {
-      const { closeClassroom } = await import("./firebase-classroom.js");
+      const { closeClassroom } = await import("./firebase-classroom.js?v=studentfix");
       await closeClassroom(state.classroom.code);
       state.classroom.meta.status = "closed";
       render();
@@ -1049,7 +1049,7 @@ root.addEventListener("change", (event) => {
   }
 });
 async function startAnnouncementWatch() {
-  const { watchAnnouncements } = await import("./firebase-classroom.js");
+  const { watchAnnouncements } = await import("./firebase-classroom.js?v=studentfix");
   watchAnnouncements({
     onAnnouncements: (announcements) => {
       state.announcements = announcements || {};
@@ -1073,11 +1073,11 @@ root.addEventListener("submit", async (event) => {
     loginButton.disabled = true;
     loginButton.textContent = "ПОДКЛЮЧЕНИЕ…";
     try {
-      const { signInTeacher } = await import("./firebase-classroom.js");
+      const { signInTeacher } = await import("./firebase-classroom.js?v=studentfix");
       state.teacher = await signInTeacher(form.elements["teacher-email"].value, form.elements["teacher-password"].value);
       state.accountRole = state.teacher.role;
       if (state.teacher.role === "teacher" || state.teacher.role === "admin") {
-        const { readManagedData } = await import("./firebase-classroom.js");
+        const { readManagedData } = await import("./firebase-classroom.js?v=studentfix");
         state.managed = await readManagedData();
       }
       stopClassroomWatch();
@@ -1099,7 +1099,7 @@ root.addEventListener("submit", async (event) => {
     const module = modules.find((item) => item.id === form.elements["session-module"].value);
     const work = form.elements["session-work"];
     try {
-      const { createClassroom } = await import("./firebase-classroom.js");
+      const { createClassroom } = await import("./firebase-classroom.js?v=studentfix");
       const session = await createClassroom({
         title: form.elements["session-title"].value.trim(),
         moduleId: module.id,
@@ -1126,9 +1126,9 @@ root.addEventListener("submit", async (event) => {
   }
   if (form.id === "managed-class-form") {
     try {
-      const { createManagedClass } = await import("./firebase-classroom.js");
+      const { createManagedClass } = await import("./firebase-classroom.js?v=studentfix");
       await createManagedClass(form.elements["class-title"].value);
-      const { readManagedData } = await import("./firebase-classroom.js");
+      const { readManagedData } = await import("./firebase-classroom.js?v=studentfix");
       state.managed = await readManagedData();
       render();
       toast("Класс создан.");
@@ -1139,14 +1139,14 @@ root.addEventListener("submit", async (event) => {
   }
   if (form.id === "student-account-form") {
     try {
-      const { createStudentAccount } = await import("./firebase-classroom.js");
+      const { createStudentAccount } = await import("./firebase-classroom.js?v=studentfix");
       const created = await createStudentAccount({
         name: form.elements["student-name"].value,
         login: form.elements["student-login"].value,
         password: form.elements["student-password"].value,
         classId: form.elements["student-class"].value
       });
-      const { readManagedData } = await import("./firebase-classroom.js");
+      const { readManagedData } = await import("./firebase-classroom.js?v=studentfix");
       state.managed = await readManagedData();
       render();
       toast(`Ученику создан логин ${created.login}. Пароль не сохраняется в базе.`);
@@ -1161,7 +1161,7 @@ root.addEventListener("submit", async (event) => {
   }
   if (form.id === "announcement-form") {
     try {
-      const { publishAnnouncement } = await import("./firebase-classroom.js");
+      const { publishAnnouncement } = await import("./firebase-classroom.js?v=studentfix");
       await publishAnnouncement({
         version: form.elements.version.value,
         title: form.elements.title.value,
@@ -1190,7 +1190,7 @@ root.addEventListener("submit", async (event) => {
         toast("Подтвердите отправку имени и сведений об устройстве.");
         return;
       }
-      const { signInStudent, joinClassroom } = await import("./firebase-classroom.js");
+      const { signInStudent, joinClassroom } = await import("./firebase-classroom.js?v=studentfix");
       const student = await signInStudent(
         form.elements["student-login"].value,
         form.elements["student-password"].value
@@ -1214,7 +1214,7 @@ root.addEventListener("submit", async (event) => {
   if (form.id === "response-form") {
     const text = form.elements.response.value.trim();
     try {
-      const { submitResponse } = await import("./firebase-classroom.js");
+      const { submitResponse } = await import("./firebase-classroom.js?v=studentfix");
       await submitResponse(state.classroom.code, state.classroom.uid, text);
       state.classroom.response = { text, submittedAt: Date.now() };
       state.classroom.draft = text;
