@@ -7,14 +7,14 @@
         "meta": {
           ".read": "auth != null && (data.child('ownerUid').val() == auth.uid || data.child('status').val() == 'open' || root.child('classrooms').child($code).child('participants').child(auth.uid).exists())",
           ".write": "auth != null && ((!data.exists() && (auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2') && newData.child('ownerUid').val() == auth.uid) || data.child('ownerUid').val() == auth.uid)",
-          ".validate": "newData.hasChildren(['ownerUid', 'title', 'moduleId', 'moduleTitle', 'workId', 'workLabel', 'status', 'createdAt']) && newData.child('ownerUid').isString() && newData.child('title').isString() && newData.child('title').val().length <= 70 && newData.child('moduleId').isString() && newData.child('moduleTitle').isString() && newData.child('workId').isString() && newData.child('workLabel').isString() && (newData.child('status').val() == 'open' || newData.child('status').val() == 'closed') && newData.child('createdAt').isNumber()"
+          ".validate": "newData.hasChildren(['ownerUid', 'title', 'moduleId', 'moduleTitle', 'workId', 'workLabel', 'status', 'createdAt']) && newData.child('ownerUid').isString() && newData.child('title').isString() && newData.child('title').val().length <= 70 && newData.child('moduleId').isString() && newData.child('moduleTitle').isString() && newData.child('workId').isString() && newData.child('workLabel').isString() && (newData.child('status').val() == 'open' || newData.child('status').val() == 'closed') && newData.child('createdAt').isNumber() && (!newData.child('classId').exists() || (newData.child('classId').isString() && newData.child('classId').val().length <= 100))"
         },
         "participants": {
           ".read": "auth != null && root.child('classrooms').child($code).child('meta').child('ownerUid').val() == auth.uid",
           "$uid": {
             ".read": "auth != null && (auth.uid == $uid || root.child('classrooms').child($code).child('meta').child('ownerUid').val() == auth.uid)",
             ".write": "auth != null && (root.child('classrooms').child($code).child('meta').child('ownerUid').val() == auth.uid || (auth.uid == $uid && root.child('classrooms').child($code).child('meta').child('status').val() == 'open'))",
-            ".validate": "newData.hasChildren(['name', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 30 && newData.child('joinedAt').isNumber() && (!newData.child('device').exists() || (newData.child('device').isString() && newData.child('device').val().length <= 160 && newData.child('deviceConsentAt').isNumber())) && (!newData.child('deviceConsentAt').exists() || (newData.child('device').exists() && newData.child('deviceConsentAt').isNumber()))"
+            ".validate": "newData.hasChildren(['name', 'joinedAt']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 30 && newData.child('joinedAt').isNumber() && (!newData.child('device').exists() || (newData.child('device').isString() && newData.child('device').val().length <= 160 && newData.child('deviceConsentAt').isNumber()))"
           }
         },
         "responses": {
@@ -22,9 +22,32 @@
           "$uid": {
             ".read": "auth != null && (auth.uid == $uid || root.child('classrooms').child($code).child('meta').child('ownerUid').val() == auth.uid)",
             ".write": "auth != null && ((auth.uid == root.child('classrooms').child($code).child('meta').child('ownerUid').val()) || (auth.uid == $uid && root.child('classrooms').child($code).child('meta').child('status').val() == 'open' && root.child('classrooms').child($code).child('participants').child($uid).exists() && (!data.exists() || data.child('annulled').val() == true)))",
-            ".validate": "newData.hasChildren(['text', 'submittedAt']) && newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('submittedAt').isNumber() && (!newData.child('score').exists() || (newData.child('score').isNumber() && newData.child('score').val() >= 0)) && (!newData.child('total').exists() || (newData.child('total').isNumber() && newData.child('total').val() > 0 && newData.child('score').val() <= newData.child('total').val())) && (!newData.child('activity').exists() || newData.child('activity').isString()) && (!newData.child('annulled').exists() || (newData.child('annulled').val() == true && auth.uid == root.child('classrooms').child($code).child('meta').child('ownerUid').val())) && (!newData.child('annulledAt').exists() || (newData.child('annulled').val() == true && newData.child('annulledAt').isNumber() && auth.uid == root.child('classrooms').child($code).child('meta').child('ownerUid').val()))"
+            ".validate": "newData.hasChildren(['text', 'submittedAt']) && newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('submittedAt').isNumber() && (!newData.child('score').exists() || (newData.child('score').isNumber() && newData.child('score').val() >= 0)) && (!newData.child('total').exists() || (newData.child('total').isNumber() && newData.child('total').val() > 0 && newData.child('score').val() <= newData.child('total').val())) && (!newData.child('activity').exists() || newData.child('activity').isString())"
           }
         }
+      }
+    },
+    "managed": {
+      ".read": "auth != null && (auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2')",
+      ".write": "auth != null && (auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2')",
+      "classes": {
+        "$classId": {
+          ".validate": "newData.hasChildren(['title', 'teacherUid', 'createdAt', 'active']) && newData.child('title').isString() && newData.child('title').val().length <= 70 && newData.child('teacherUid').isString() && newData.child('createdAt').isNumber() && newData.child('active').isBoolean()"
+        }
+      },
+      "students": {
+        "$uid": {
+          ".read": "auth != null && (auth.uid == $uid || auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2')",
+          ".write": "auth != null && (auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2' || auth.uid == $uid)",
+          ".validate": "newData.hasChildren(['name', 'login', 'classId', 'active', 'createdAt', 'createdByUid']) && newData.child('name').isString() && newData.child('name').val().length <= 60 && newData.child('login').isString() && newData.child('login').val().length <= 100 && newData.child('classId').isString() && newData.child('active').isBoolean() && newData.child('createdAt').isNumber() && newData.child('createdByUid').isString()"
+        }
+      }
+    },
+    "announcements": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2'",
+      "$id": {
+        ".validate": "newData.hasChildren(['version', 'title', 'details', 'publishedBy', 'publishedAt']) && newData.child('version').isString() && newData.child('version').val().length <= 30 && newData.child('title').isString() && newData.child('title').val().length <= 100 && newData.child('details').isString() && newData.child('details').val().length <= 1000 && newData.child('publishedBy').isString() && newData.child('publishedAt').isNumber()"
       }
     }
   }

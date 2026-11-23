@@ -20,6 +20,8 @@ The public Web app configuration is in `src/firebase-classroom.js`. Its API key 
 - Students join anonymously with a display name and complete the assigned test, crossword, or game.
 - Before joining, students must acknowledge that their name and browser-provided device summary (model when available, operating system, and browser) are sent to the teacher and stored with the classroom participant record.
 - The app checks those activities in the browser and sends the score to the teacher's live panel.
+- The teacher can create managed classes and student accounts directly in Live Classroom. Student passwords are handled by Firebase Authentication and are not stored in Realtime Database. Blocking a student updates the database status and prevents joining; permanent account deletion is not available without the Firebase Admin SDK.
+- The administrator UID can publish release announcements that are shown on the site for authenticated users.
 - Each student can submit once per classroom. While the session is open, the teacher can choose **АННУЛИРОВАТЬ · РАЗРЕШИТЬ ПОВТОР** on that student's result to allow one new attempt.
 - The teacher closes the session to stop new joins and submissions.
 
