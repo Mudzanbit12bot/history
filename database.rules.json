@@ -4,6 +4,7 @@
     ".write": false,
     "classrooms": {
       "$code": {
+        ".write": "auth != null && (root.child('classrooms').child($code).child('meta').child('ownerUid').val() == auth.uid || auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2')",
         "meta": {
           ".read": "auth != null && (data.child('ownerUid').val() == auth.uid || data.child('status').val() == 'open' || root.child('classrooms').child($code).child('participants').child(auth.uid).exists())",
           ".write": "auth != null && ((!data.exists() && (auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2') && newData.child('ownerUid').val() == auth.uid) || data.child('ownerUid').val() == auth.uid)",

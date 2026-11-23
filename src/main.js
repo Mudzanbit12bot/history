@@ -504,6 +504,7 @@ function resumeStoredClassroom() {
   }
 }
 function classroomErrorText(error) {
+  if (error?.message === "CLASSROOM_NOT_FOUND") return "Занятие уже удалено или не найдено.";
   if (error?.code === "auth/unauthorized-domain") return "Домен сайта не разрешён в Firebase Authentication. Добавьте mudzanbit12bot.github.io в Authorized domains.";
   if (error?.code === "auth/invalid-email") return "Введите корректную почту или логин.";
   if (error?.code === "auth/too-many-requests") return "Слишком много попыток входа. Подождите несколько минут.";
