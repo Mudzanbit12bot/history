@@ -195,10 +195,22 @@ function homePage() {
   const last = progress.attempts[0];
   const progressPct = Math.round(done / modules.length * 100);
   const latestAnnouncements = Object.values(state.announcements).sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
-  const announcement = latestAnnouncements[0];
-  const announcementHtml = announcement ? `<div class="classroom-warning"><span>i</span><p><strong>ОБНОВЛЕНИЕ ${escapeHtml(announcement.version || "")}: ${escapeHtml(announcement.title)}</strong><br>${escapeHtml(announcement.details)}</p></div>` : "";
+  const announcement = latestAnnouncements[0] || {
+    version: "2.0",
+    title: "Управление классами и учениками",
+    details: "Добавлены создание классов, индивидуальные логины и пароли учеников, блокировка доступа ученика и админ-панель для публикации обновлений.",
+    publishedBy: "Андрей Витальевич",
+    publishedAt: Date.now()
+  };
   return `
-    ${announcementHtml}
+    <section class="panel release-panel" aria-label="Обновления сайта">
+      <div class="panel-heading">
+        <div><div class="eyebrow">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ · ${escapeHtml(announcement.version || "")}</div><h3>${escapeHtml(announcement.title)}</h3></div>
+        <span class="status-chip">НОВОЕ</span>
+      </div>
+      <p class="small-copy">${escapeHtml(announcement.details)}</p>
+      <small class="classroom-submitted">Опубликовано: ${escapeHtml(announcement.publishedBy || "Андрей Витальевич")}</small>
+    </section>
     <div class="hero-grid">
       <section class="hero-panel">
         <div class="hero-kicker"><span class="pulse"></span> DIGITAL HISTORY ARCHIVE <span class="hero-sep">/</span> 2077</div>
