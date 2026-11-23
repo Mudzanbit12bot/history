@@ -200,11 +200,18 @@ function homePage() {
     title: "Управление классами и учениками",
     details: "Добавлены создание классов, индивидуальные логины и пароли учеников, блокировка доступа ученика и админ-панель для публикации обновлений.",
     publishedBy: "Владелец сайта · Рябчук Иван Андреевич",
-    publishedDate: "23.11.2026",
+    publishedDate: "23.11.2026 · 14:23 · Иркутск, UTC+8",
     publishedAt: Date.now()
   };
   const publishedDate = announcement.publishedDate || (announcement.publishedAt
-    ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(announcement.publishedAt))
+    ? `${new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Irkutsk"
+      }).format(new Date(announcement.publishedAt))} · Иркутск, UTC+8`
     : "");
   return `
     <section class="panel release-panel" aria-label="Обновления сайта">
