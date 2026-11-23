@@ -27,13 +27,20 @@ async function getServices() {
       import(`${firebaseSdk}/firebase-database.js`)
     ]).then(([appSdk, authSdk, databaseSdk]) => {
       const app = appSdk.initializeApp(firebaseConfig);
-      return {
+      const auth = authSdk.getAuth(app);
+      return authSdk.setPersistence(auth, authSdk.browserLocalPersistence).then(() => ({
         appSdk,
-        auth: authSdk.getAuth(app),
+        auth,
         authSdk,
         database: databaseSdk.getDatabase(app),
         databaseSdk
-      };
+      })).catch(() => ({
+        appSdk,
+        auth,
+        authSdk,
+        database: databaseSdk.getDatabase(app),
+        databaseSdk
+      }));
     });
   }
   return servicesPromise;
@@ -114,7 +121,23 @@ export async function signInTeacher(email, password) {
 
 export async function signInStudent(login, password) {
   const services = await getServices();
-  const credential = await services.authSdk.signInWithEmailAndPassword(services.auth, loginToEmail(login), password);
+  const candidate = String(login).trim();
+  let credential;
+  try {
+    credential = await services.authSdk.signInWithEmailAndPassword(services.auth, loginToEmail(candidate), password);
+  } catch (error) {
+    if (candidate.includes("@")) throw error;
+    try {
+      credential = await services.authSdk.signInWithEmailAndPassword(services.auth, candidate, password);
+      return await finishStudentSignIn(services, credential);
+    } catch {
+      throw error;
+    }
+  }
+  return finishStudentSignIn(services, credential);
+}
+
+async function finishStudentSignIn(services, credential) {
   if (credential.user.uid === ADMIN_UID || credential.user.uid === TEACHER_UID) {
     await services.authSdk.signOut(services.auth);
     throw new Error("STUDENT_ACCOUNT_REQUIRED");
@@ -189,6 +212,41 @@ export async function readManagedData() {
   if (user.uid !== ADMIN_UID && user.uid !== TEACHER_UID) throw new Error("CLASSROOM_FORBIDDEN");
   const snapshot = await services.databaseSdk.get(services.databaseSdk.ref(services.database, "managed"));
   return snapshot.exists() ? snapshot.val() : { classes: {}, students: {} };
+}
+
+export async function deleteStudent(uid) {
+  const services = await getServices();
+  const user = await getSignedInUser(services);
+  if (user.uid !== ADMIN_UID && user.uid !== TEACHER_UID) throw new Error("CLASSROOM_FORBIDDEN");
+  const studentSnapshot = await services.databaseSdk.get(
+    services.databaseSdk.ref(services.database, `managed/students/${uid}`)
+  );
+  if (!studentSnapshot.exists()) throw new Error("STUDENT_ACCOUNT_NOT_REGISTERED");
+  const student = studentSnapshot.val();
+  await services.databaseSdk.remove(services.databaseSdk.ref(services.database, `managed/students/${uid}`));
+  if (student.classId) {
+    await services.databaseSdk.remove(
+      services.databaseSdk.ref(services.database, `managed/classes/${student.classId}/students/${uid}`)
+    );
+  }
+}
+
+export async function deleteManagedClass(classId) {
+  const services = await getServices();
+  const user = await getSignedInUser(services);
+  if (user.uid !== ADMIN_UID && user.uid !== TEACHER_UID) throw new Error("CLASSROOM_FORBIDDEN");
+  const classSnapshot = await services.databaseSdk.get(
+    services.databaseSdk.ref(services.database, `managed/classes/${classId}`)
+  );
+  if (!classSnapshot.exists()) throw new Error("MANAGED_CLASS_NOT_FOUND");
+  const classData = classSnapshot.val();
+  const studentLinks = classData.students || {};
+  await Promise.all(Object.keys(studentLinks).map((uid) =>
+    services.databaseSdk.remove(services.databaseSdk.ref(services.database, `managed/students/${uid}`))
+  ));
+  await services.databaseSdk.remove(
+    services.databaseSdk.ref(services.database, `managed/classes/${classId}`)
+  );
 }
 
 export async function publishAnnouncement({ version, title, details }) {

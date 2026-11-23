@@ -4,6 +4,8 @@ import { quizGames } from "./quiz-games.js";
 const KEY = "history2077-v1";
 const QUIZ_KEY = "history2077-quiz-game-v1";
 const LIVE_KEY = "history2077-live-classroom-v1";
+const ROLE_LOGIN_KEY = "history2077-role-login-v1";
+const STUDENT_LOGIN_KEY = "history2077-student-login-v1";
 const root = document.querySelector("#app");
 const navItems = [
   ["home", "Обзор", "◈"],
@@ -536,8 +538,10 @@ function managementPanel() {
       <div class="classroom-responses"><div class="eyebrow">ПОСЛЕДНИЕ ОБНОВЛЕНИЯ</div>${announcements.length ? announcements.slice(0, 10).map((item) => `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.version)}</span></div><p>${escapeHtml(item.details)}</p></article>`).join("") : `<p class="small-copy">Обновлений пока нет.</p>`}</div>`;
   }
   const classOptions = classes.map(([id, item]) => `<option value="${escapeHtml(id)}">${escapeHtml(item.title)}</option>`).join("");
-  const studentRows = students.map(([uid, item]) => `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(item.name)}</strong><span>${item.active ? "АКТИВЕН" : "ЗАБЛОКИРОВАН"}</span></div><p>Логин: ${escapeHtml(item.login)} · Класс: ${escapeHtml((state.managed.classes?.[item.classId]?.title) || item.classId)}</p><button class="button button-outline button-small" data-action="toggle-student" data-uid="${escapeHtml(uid)}" data-active="${item.active ? "false" : "true"}">${item.active ? "ЗАБЛОКИРОВАТЬ" : "РАЗБЛОКИРОВАТЬ"}</button></article>`).join("");
+  const classRows = classes.map(([id, item]) => `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(item.title)}</strong><span>${Object.keys(item.students || {}).length} УЧЕНИКОВ</span></div><button class="button button-danger button-small" data-action="delete-class" data-class-id="${escapeHtml(id)}">УДАЛИТЬ КЛАСС И ЕГО УЧЕНИКОВ</button></article>`).join("");
+  const studentRows = students.map(([uid, item]) => `<article class="classroom-response"><div class="classroom-response-head"><strong>${escapeHtml(item.name)}</strong><span>${item.active ? "АКТИВЕН" : "ЗАБЛОКИРОВАН"}</span></div><p>Логин: ${escapeHtml(item.login)} · Класс: ${escapeHtml((state.managed.classes?.[item.classId]?.title) || item.classId)}</p><div class="student-actions"><button class="button button-outline button-small" data-action="toggle-student" data-uid="${escapeHtml(uid)}" data-active="${item.active ? "false" : "true"}">${item.active ? "ЗАБЛОКИРОВАТЬ" : "РАЗБЛОКИРОВАТЬ"}</button><button class="button button-danger button-small" data-action="delete-student" data-uid="${escapeHtml(uid)}">УДАЛИТЬ УЧЕНИКА</button></div></article>`).join("");
   return `<div class="panel-heading"><div><div class="eyebrow">ПРЕПОДАВАТЕЛЬ</div><h3>Управление классами</h3></div></div>
+    <div class="classroom-responses"><div class="eyebrow">КЛАССЫ</div>${classRows || '<p class="small-copy">Классы ещё не создана.</p>'}</div>
     <div class="eyebrow">НОВЫЙ КЛАСС</div>
     <form id="managed-class-form"><label class="form-field"><span>НАЗВАНИЕ КЛАССА</span><input name="class-title" required maxlength="70" placeholder="Например, 10А — история" /></label><button class="button button-primary button-full" type="submit">СОЗДАТЬ КЛАСС <span>→</span></button></form>
     <div class="eyebrow" style="margin-top:18px">НОВЫЙ УЧЕНИК</div>
@@ -549,9 +553,10 @@ function classroomPage() {
   if (state.joining && state.joinCode) return joinPage();
   const session = state.classroom;
   const error = session?.error ? `<div class="classroom-warning"><span>!</span><p>${escapeHtml(session.error)}</p></div>` : "";
+  const savedRoleLogin = localStorage.getItem(ROLE_LOGIN_KEY) || "";
   const teacherPanel = state.teacher && (state.accountRole === "teacher" || state.accountRole === "admin")
     ? `${managementPanel()}<div style="margin-top:18px" class="eyebrow">НОВОЕ ЗАНЯТИЕ</div><h3>Настроить занятие</h3><form id="session-form"><label class="form-field"><span>НАЗВАНИЕ ЗАНЯТИЯ</span><input name="session-title" required maxlength="70" placeholder="Например, Русь при Ярославе Мудром" /></label><label class="form-field"><span>КЛАСС</span><select name="session-class">${Object.entries(state.managed.classes || {}).map(([id, item]) => `<option value="${escapeHtml(id)}">${escapeHtml(item.title)}</option>`).join("") || '<option value="">Без привязки к классу</option>'}</select></label><label class="form-field"><span>УЧЕБНЫЙ МОДУЛЬ</span><select name="session-module">${modules.map((m) => `<option value="${m.id}">${m.number} · ${escapeHtml(m.title)}</option>`).join("")}</select></label><label class="form-field"><span>ФОРМА РАБОТЫ</span><select name="session-work"><option value="test">Тест · базовый уровень</option><option value="test-2">Тест · уверенный уровень</option><option value="crossword">Кроссворд</option><option value="game">Игровая рефлексия</option></select></label><button class="button button-primary button-full" type="submit" ${session?.meta?.status === "open" ? "disabled" : ""}>СОЗДАТЬ ЗАНЯТИЕ <span>→</span></button></form><button class="button button-quiet button-small" data-action="teacher-signout" style="margin-top:12px">ВЫЙТИ ИЗ АККАУНТА</button>`
-    : `<div class="eyebrow">ВХОД ПРЕПОДАВАТЕЛЯ</div><h3>Войдите в аккаунт</h3><p class="small-copy">Введите почту аккаунта или логин, выданный для преподавателя.</p><form id="teacher-login-form"><label class="form-field"><span>ПОЧТА ИЛИ ЛОГИН</span><input name="teacher-email" required autocomplete="username" /></label><label class="form-field"><span>ПАРОЛЬ</span><input type="password" name="teacher-password" required autocomplete="current-password" /></label><button class="button button-primary button-full" type="submit">ВОЙТИ <span>→</span></button></form>`;
+    : `<div class="eyebrow">ВХОД ПРЕПОДАВАТЕЛЯ</div><h3>Войдите в аккаунт</h3><p class="small-copy">Введите почту аккаунта или логин, выданный для преподавателя.</p><form id="teacher-login-form"><label class="form-field"><span>ПОЧТА ИЛИ ЛОГИН</span><input name="teacher-email" required autocomplete="username" value="${escapeHtml(savedRoleLogin)}" /></label><label class="form-field"><span>ПАРОЛЬ</span><input type="password" name="teacher-password" required autocomplete="current-password" /></label><button class="button button-primary button-full" type="submit">ВОЙТИ <span>→</span></button></form>`;
   return `${pageHeading("LIVE CLASSROOM / FIREBASE", "Занятие в аудитории", "Создайте занятие, поделитесь кодом или QR-ссылкой и принимайте ответы в реальном времени.")}
     ${error}<div class="classroom-warning"><span>i</span><p>Ученики входят по выданному логину и паролю. Тесты, кроссворды и игры проверяются в браузере; преподаватель видит результаты в реальном времени.</p></div>
     <div class="classroom-grid"><section class="panel classroom-create">${teacherPanel}</section>
@@ -605,8 +610,9 @@ function studentClassroomPage(session) {
 }
 function joinPage() {
   const code = state.joinCode.toUpperCase();
+  const savedStudentLogin = localStorage.getItem(STUDENT_LOGIN_KEY) || "";
   return `${pageHeading("LIVE CLASSROOM / УЧЕНИК", "Подключение к занятию", "Введите имя или псевдоним. Регистрация и контактные данные не нужны.")}
-    <div class="join-card panel"><div class="join-mark">H://</div><div class="eyebrow">КОД СЕССИИ</div><div class="join-code">${escapeHtml(code)}</div><div class="classroom-warning"><span>i</span><p>Войдите с логином и паролем, выданными преподавателем. Преподавателю передаются имя и доступная браузеру сводка устройства.</p></div><form id="join-form"><label class="form-field"><span>ЛОГИН УЧЕНИКА</span><input name="student-login" required maxlength="100" autocomplete="username" /></label><label class="form-field"><span>ПАРОЛЬ</span><input type="password" name="student-password" required autocomplete="current-password" /></label><label class="device-consent"><input name="device-consent" type="checkbox" required /><span>Я понимаю, что имя и сводка устройства будут переданы преподавателю и сохранены в Firebase для этого занятия.</span></label><button class="button button-primary button-full">ВОЙТИ И ПОДКЛЮЧИТЬСЯ <span>→</span></button></form><button class="text-button" data-action="leave-join">← К АРХИВУ</button></div>`;
+    <div class="join-card panel"><div class="join-mark">H://</div><div class="eyebrow">КОД СЕССИИ</div><div class="join-code">${escapeHtml(code)}</div><div class="classroom-warning"><span>i</span><p>Войдите с логином и паролем, выданными преподавателем. Преподавателю передаются имя и доступная браузеру сводка устройства.</p></div><form id="join-form"><label class="form-field"><span>ЛОГИН УЧЕНИКА</span><input name="student-login" required maxlength="100" autocomplete="username" value="${escapeHtml(savedStudentLogin)}" /></label><label class="form-field"><span>ПАРОЛЬ</span><input type="password" name="student-password" required autocomplete="current-password" /></label><label class="device-consent"><input name="device-consent" type="checkbox" required /><span>Я понимаю, что имя и сводка устройства будут переданы преподавателю и сохранены в Firebase для этого занятия.</span></label><button class="button button-primary button-full">ВОЙТИ И ПОДКЛЮЧИТЬСЯ <span>→</span></button></form><button class="text-button" data-action="leave-join">← К АРХИВУ</button></div>`;
 }
 function resultsPage() {
   const attempts = progress.attempts;
@@ -997,6 +1003,40 @@ root.addEventListener("click", async (event) => {
       toast(classroomErrorText(error));
     }
   }
+  if (action === "delete-student") {
+    const uid = target.dataset.uid;
+    const student = state.managed.students?.[uid];
+    if (!student) return;
+    if (!window.confirm(`Удалить ученика «${student.name}» из системы и класса?`)) return;
+    if (!window.confirm("Подтвердите ещё раз: запись ученика будет удалена из Firebase Realtime Database.")) return;
+    try {
+      const { deleteStudent } = await import("./firebase-classroom.js?v=managefix");
+      await deleteStudent(uid);
+      const { readManagedData } = await import("./firebase-classroom.js?v=managefix");
+      state.managed = await readManagedData();
+      render();
+      toast(`Ученик «${student.name}» удалён из базы.`);
+    } catch (error) {
+      toast(classroomErrorText(error));
+    }
+  }
+  if (action === "delete-class") {
+    const classId = target.dataset.classId;
+    const managedClass = state.managed.classes?.[classId];
+    if (!managedClass) return;
+    if (!window.confirm(`Удалить класс «${managedClass.title}» и всех учеников этого класса?`)) return;
+    if (!window.confirm("Подтвердите ещё раз: удаление затронет записи учеников в Firebase.")) return;
+    try {
+      const { deleteManagedClass } = await import("./firebase-classroom.js?v=managefix");
+      await deleteManagedClass(classId);
+      const { readManagedData } = await import("./firebase-classroom.js?v=managefix");
+      state.managed = await readManagedData();
+      render();
+      toast(`Класс «${managedClass.title}» удалён.`);
+    } catch (error) {
+      toast(classroomErrorText(error));
+    }
+  }
   if (action === "annul-classroom-attempt" && state.classroom?.role === "teacher") {
     const uid = target.dataset.uid;
     const participant = state.classroom.participants?.[uid];
@@ -1121,7 +1161,9 @@ root.addEventListener("submit", async (event) => {
     loginButton.textContent = "ПОДКЛЮЧЕНИЕ…";
     try {
       const { signInTeacher } = await import("./firebase-classroom.js?v=studentfix");
-      state.teacher = await signInTeacher(form.elements["teacher-email"].value, form.elements["teacher-password"].value);
+      const roleLogin = form.elements["teacher-email"].value.trim();
+      state.teacher = await signInTeacher(roleLogin, form.elements["teacher-password"].value);
+      localStorage.setItem(ROLE_LOGIN_KEY, roleLogin);
       state.accountRole = state.teacher.role;
       if (state.teacher.role === "teacher" || state.teacher.role === "admin") {
         const { readManagedData } = await import("./firebase-classroom.js?v=studentfix");
@@ -1242,6 +1284,7 @@ root.addEventListener("submit", async (event) => {
         form.elements["student-login"].value,
         form.elements["student-password"].value
       );
+      localStorage.setItem(STUDENT_LOGIN_KEY, form.elements["student-login"].value.trim());
       const joined = await joinClassroom(state.joinCode.toUpperCase(), student.name, await getDeviceSummary());
       state.classroom = {
         ...joined,
