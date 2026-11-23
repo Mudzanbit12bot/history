@@ -199,9 +199,13 @@ function homePage() {
     version: "2.0",
     title: "Управление классами и учениками",
     details: "Добавлены создание классов, индивидуальные логины и пароли учеников, блокировка доступа ученика и админ-панель для публикации обновлений.",
-    publishedBy: "Андрей Витальевич",
+    publishedBy: "Владелец сайта · Рябчук Иван Андреевич",
+    publishedDate: "23.11.2026",
     publishedAt: Date.now()
   };
+  const publishedDate = announcement.publishedDate || (announcement.publishedAt
+    ? new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(announcement.publishedAt))
+    : "");
   return `
     <section class="panel release-panel" aria-label="Обновления сайта">
       <div class="panel-heading">
@@ -209,7 +213,7 @@ function homePage() {
         <span class="status-chip">НОВОЕ</span>
       </div>
       <p class="small-copy">${escapeHtml(announcement.details)}</p>
-      <small class="classroom-submitted">Опубликовано: ${escapeHtml(announcement.publishedBy || "Андрей Витальевич")}</small>
+      <small class="classroom-submitted">Опубликовано: ${escapeHtml(announcement.publishedBy || "Владелец сайта · Рябчук Иван Андреевич")}${publishedDate ? ` · ${escapeHtml(publishedDate)}` : ""}</small>
     </section>
     <div class="hero-grid">
       <section class="hero-panel">
@@ -1150,7 +1154,7 @@ root.addEventListener("submit", async (event) => {
           version: form.elements.version.value,
           title: form.elements.title.value,
           details: form.elements.details.value,
-          publishedBy: "Андрей Витальевич",
+          publishedBy: "Владелец сайта · Рябчук Иван Андреевич",
           publishedAt: Date.now()
         },
         ...state.announcements

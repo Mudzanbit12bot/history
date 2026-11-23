@@ -174,7 +174,7 @@ export async function publishAnnouncement({ version, title, details }) {
   const id = `release-${Date.now()}`;
   await services.databaseSdk.set(
     services.databaseSdk.ref(services.database, `announcements/${id}`),
-    { version: String(version).trim().slice(0, 30), title: title.trim().slice(0, 100), details: details.trim().slice(0, 1000), publishedBy: "Андрей Витальевич", publishedAt: Date.now() }
+    { version: String(version).trim().slice(0, 30), title: title.trim().slice(0, 100), details: details.trim().slice(0, 1000), publishedBy: "Владелец сайта · Рябчук Иван Андреевич", publishedAt: Date.now() }
   );
   return id;
 }
