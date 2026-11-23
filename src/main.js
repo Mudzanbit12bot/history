@@ -34,6 +34,7 @@ const state = {
   classroom: null,
   teacher: null,
   accountRole: "",
+  studentProfile: null,
   managed: { classes: {}, students: {} },
   announcements: {},
   joinCode: new URLSearchParams(location.search).get("join") || "",
@@ -86,6 +87,8 @@ function clearAllData() {
   progress = { attempts: [], completed: [], favorites: [], nickname: "" };
   quizProgress = { selectedGameId: quizGames[0].id, games: {} };
   state.classroom = null;
+  state.studentProfile = null;
+  state.accountRole = "";
   state.quizQuestionSet = null;
   state.joinCode = "";
   state.joining = false;
@@ -164,6 +167,10 @@ function setPage(page, options = {}) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function shell(content) {
+  const studentName = state.accountRole === "student" ? (state.studentProfile?.name || state.classroom?.name || "Ученик") : "";
+  const profileHtml = studentName
+    ? `<div class="student-profile"><span>УЧЕНИК</span><strong>${escapeHtml(studentName)}</strong><button data-action="student-signout" aria-label="Выйти из аккаунта ученика">ВЫЙТИ</button></div>`
+    : `<div class="avatar">${escapeHtml((progress.nickname || "И")[0].toUpperCase())}</div>`;
   root.innerHTML = `
     <div class="app-shell">
       <aside class="sidebar">
@@ -173,7 +180,7 @@ function shell(content) {
         <div class="sidebar-bottom"><span class="online-dot"></span><span>АРХИВ ДОСТУПЕН</span><span class="sidebar-version">v1.0</span><button class="sidebar-clear" data-action="clear-all-data">ОЧИСТИТЬ ДАННЫЕ</button></div>
       </aside>
       <main class="main-area">
-        <header class="topbar"><button class="mobile-menu" data-action="toggle-menu" aria-label="Открыть меню">☰</button><div class="breadcrumb">HISTORY://2077 <span>/</span> <b>${escapeHtml(navItems.find(([id]) => id === state.page)?.[1] || "Архив")}</b></div><div class="topbar-right"><span class="sync-status"><i></i> ${state.page === "classroom" ? "FIREBASE REALTIME" : "ЛОКАЛЬНЫЙ РЕЖИМ"}</span><button class="icon-button" data-page="settings" aria-label="Настройки">⚙</button><div class="avatar">${escapeHtml((progress.nickname || "И")[0].toUpperCase())}</div></div></header>
+        <header class="topbar"><button class="mobile-menu" data-action="toggle-menu" aria-label="Открыть меню">☰</button><div class="breadcrumb">HISTORY://2077 <span>/</span> <b>${escapeHtml(navItems.find(([id]) => id === state.page)?.[1] || "Архив")}</b></div><div class="topbar-right"><span class="sync-status"><i></i> ${state.page === "classroom" ? "FIREBASE REALTIME" : "ЛОКАЛЬНЫЙ РЕЖИМ"}</span><button class="icon-button" data-page="settings" aria-label="Настройки">⚙</button>${profileHtml}</div></header>
         <section class="page-content">${content}</section>
         <footer class="footer"><span>HISTORY://2077</span><span>Автор проекта: Рябчук Иван Андреевич</span><span>Учебный проект · факты сопровождаются источниками и оговорками</span></footer>
       </main>
@@ -457,12 +464,29 @@ async function watchCurrentClassroom() {
   }
 }
 function resumeStoredClassroom() {
-  if (state.page !== "classroom" || state.classroom || state.joining) return;
+  if (state.classroom || state.joining) return;
   const saved = localStorage.getItem(LIVE_KEY);
   if (!saved) return;
   try {
     const stored = JSON.parse(saved);
     if (!stored.code || !stored.uid) throw new Error("Сохранённые данные занятия повреждены.");
+    if (stored.role === "student") {
+      state.joinCode = stored.code;
+      state.joining = true;
+      state.accountRole = "student";
+      state.studentProfile = { uid: stored.uid, name: stored.name || "Ученик" };
+      state.classroom = {
+        ...stored,
+        role: "student",
+        meta: null,
+        name: stored.name || "Ученик",
+        draft: ""
+      };
+      state.page = "classroom";
+      render();
+      watchCurrentClassroom();
+      return;
+    }
     state.classroom = {
       ...stored,
       role: "teacher",
@@ -1012,6 +1036,21 @@ root.addEventListener("click", async (event) => {
     history.replaceState({}, "", location.pathname);
     setPage("home");
   }
+  if (action === "student-signout") {
+    stopClassroomWatch();
+    try {
+      const { signOutTeacher } = await import("./firebase-classroom.js?v=rolefix");
+      await signOutTeacher();
+    } catch { }
+    state.classroom = null;
+    state.joining = false;
+    state.studentProfile = null;
+    state.accountRole = "";
+    state.joinCode = "";
+    history.replaceState({}, "", location.pathname);
+    setPage("home");
+    toast("Вы вышли из аккаунта ученика.");
+  }
   if (action === "export-csv") exportCsv();
   if (action === "print") window.print();
   if (action === "clear-all-data") clearAllData();
@@ -1198,7 +1237,7 @@ root.addEventListener("submit", async (event) => {
         toast("Подтвердите отправку имени и сведений об устройстве.");
         return;
       }
-      const { signInStudent, joinClassroom } = await import("./firebase-classroom.js?v=studentfix");
+      const { signInStudent, joinClassroom } = await import("./firebase-classroom.js?v=profilefix");
       const student = await signInStudent(
         form.elements["student-login"].value,
         form.elements["student-password"].value
@@ -1213,10 +1252,21 @@ root.addEventListener("submit", async (event) => {
       };
       state.teacher = null;
       state.accountRole = "student";
+      state.studentProfile = { uid: student.uid, name: student.name, login: student.login, classId: student.classId };
       state.managed = { classes: {}, students: {} };
       state.joining = true;
+      try {
+        localStorage.setItem(LIVE_KEY, JSON.stringify({
+          code: state.joinCode.toUpperCase(),
+          uid: student.uid,
+          role: "student",
+          name: student.name,
+          url: `${location.origin}${location.pathname}?join=${state.joinCode.toUpperCase()}`
+        }));
+      } catch { }
       await watchCurrentClassroom();
       render();
+      toast(`Вход выполнен: ${student.name}.`);
     } catch (error) {
       toast(classroomErrorText(error));
     }
