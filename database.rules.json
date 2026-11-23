@@ -38,7 +38,7 @@
       "students": {
         "$uid": {
           ".read": "auth != null && (auth.uid == $uid || auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2')",
-          ".write": "auth != null && (auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2' || auth.uid == $uid)",
+          ".write": "auth != null && (auth.uid == 'ZmsmHQe9OZMbbWRBkTTe65iqRfJ2' || auth.uid == '2Bf8YaJUOFOlXtgy8Isui0pcdRi2')",
           ".validate": "newData.hasChildren(['name', 'login', 'classId', 'active', 'createdAt', 'createdByUid']) && newData.child('name').isString() && newData.child('name').val().length <= 60 && newData.child('login').isString() && newData.child('login').val().length <= 100 && newData.child('classId').isString() && newData.child('active').isBoolean() && newData.child('createdAt').isNumber() && newData.child('createdByUid').isString()"
         }
       }

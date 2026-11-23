@@ -496,6 +496,7 @@ function classroomErrorText(error) {
   return error?.message || "Не удалось подключиться к Firebase.";
 }
 function managementPanel() {
+  if (state.accountRole === "student") return "";
   const classes = Object.entries(state.managed.classes || {});
   const students = Object.entries(state.managed.students || {});
   if (state.accountRole === "admin") {
@@ -524,7 +525,7 @@ function classroomPage() {
   if (state.joining && state.joinCode) return joinPage();
   const session = state.classroom;
   const error = session?.error ? `<div class="classroom-warning"><span>!</span><p>${escapeHtml(session.error)}</p></div>` : "";
-  const teacherPanel = state.teacher
+  const teacherPanel = state.teacher && (state.accountRole === "teacher" || state.accountRole === "admin")
     ? `${managementPanel()}<div style="margin-top:18px" class="eyebrow">НОВОЕ ЗАНЯТИЕ</div><h3>Настроить занятие</h3><form id="session-form"><label class="form-field"><span>НАЗВАНИЕ ЗАНЯТИЯ</span><input name="session-title" required maxlength="70" placeholder="Например, Русь при Ярославе Мудром" /></label><label class="form-field"><span>КЛАСС</span><select name="session-class">${Object.entries(state.managed.classes || {}).map(([id, item]) => `<option value="${escapeHtml(id)}">${escapeHtml(item.title)}</option>`).join("") || '<option value="">Без привязки к классу</option>'}</select></label><label class="form-field"><span>УЧЕБНЫЙ МОДУЛЬ</span><select name="session-module">${modules.map((m) => `<option value="${m.id}">${m.number} · ${escapeHtml(m.title)}</option>`).join("")}</select></label><label class="form-field"><span>ФОРМА РАБОТЫ</span><select name="session-work"><option value="test">Тест · базовый уровень</option><option value="test-2">Тест · уверенный уровень</option><option value="crossword">Кроссворд</option><option value="game">Игровая рефлексия</option></select></label><button class="button button-primary button-full" type="submit" ${session?.meta?.status === "open" ? "disabled" : ""}>СОЗДАТЬ ЗАНЯТИЕ <span>→</span></button></form><button class="button button-quiet button-small" data-action="teacher-signout" style="margin-top:12px">ВЫЙТИ ИЗ АККАУНТА</button>`
     : `<div class="eyebrow">ВХОД ПРЕПОДАВАТЕЛЯ</div><h3>Войдите в аккаунт</h3><p class="small-copy">Введите почту аккаунта или логин, выданный для преподавателя.</p><form id="teacher-login-form"><label class="form-field"><span>ПОЧТА ИЛИ ЛОГИН</span><input name="teacher-email" required autocomplete="username" /></label><label class="form-field"><span>ПАРОЛЬ</span><input type="password" name="teacher-password" required autocomplete="current-password" /></label><button class="button button-primary button-full" type="submit">ВОЙТИ <span>→</span></button></form>`;
   return `${pageHeading("LIVE CLASSROOM / FIREBASE", "Занятие в аудитории", "Создайте занятие, поделитесь кодом или QR-ссылкой и принимайте ответы в реальном времени.")}
@@ -998,8 +999,15 @@ root.addEventListener("click", async (event) => {
   }
   if (action === "leave-join") {
     stopClassroomWatch();
+    try {
+      const { signOutTeacher } = await import("./firebase-classroom.js?v=rolefix");
+      await signOutTeacher();
+    } catch { }
     state.classroom = null;
     state.joining = false;
+    state.teacher = null;
+    state.accountRole = "";
+    state.managed = { classes: {}, students: {} };
     state.joinCode = "";
     history.replaceState({}, "", location.pathname);
     setPage("home");
@@ -1203,6 +1211,9 @@ root.addEventListener("submit", async (event) => {
         name: student.name,
         draft: ""
       };
+      state.teacher = null;
+      state.accountRole = "student";
+      state.managed = { classes: {}, students: {} };
       state.joining = true;
       await watchCurrentClassroom();
       render();

@@ -105,13 +105,20 @@ export async function signInTeacher(email, password) {
   }
   if (!credential) throw lastError;
   const role = credential.user.uid === ADMIN_UID ? "admin" : credential.user.uid === TEACHER_UID ? "teacher" : "student";
+  if (role === "student") {
+    await services.authSdk.signOut(services.auth);
+    throw new Error("STUDENT_ACCOUNT_REQUIRED");
+  }
   return { uid: credential.user.uid, email: credential.user.email, role };
 }
 
 export async function signInStudent(login, password) {
   const services = await getServices();
   const credential = await services.authSdk.signInWithEmailAndPassword(services.auth, loginToEmail(login), password);
-  if (credential.user.uid === ADMIN_UID || credential.user.uid === TEACHER_UID) throw new Error("STUDENT_ACCOUNT_REQUIRED");
+  if (credential.user.uid === ADMIN_UID || credential.user.uid === TEACHER_UID) {
+    await services.authSdk.signOut(services.auth);
+    throw new Error("STUDENT_ACCOUNT_REQUIRED");
+  }
   const snapshot = await services.databaseSdk.get(
     services.databaseSdk.ref(services.database, `managed/students/${credential.user.uid}`)
   );
