@@ -478,6 +478,9 @@ function resumeStoredClassroom() {
   }
 }
 function classroomErrorText(error) {
+  if (error?.code === "auth/unauthorized-domain") return "Домен сайта не разрешён в Firebase Authentication. Добавьте mudzanbit12bot.github.io в Authorized domains.";
+  if (error?.code === "auth/invalid-email") return "Введите корректную почту или логин.";
+  if (error?.code === "auth/too-many-requests") return "Слишком много попыток входа. Подождите несколько минут.";
   if (error?.message === "STUDENT_ACCOUNT_BLOCKED") return "Ученик заблокирован. Обратитесь к преподавателю.";
   if (error?.message === "STUDENT_ACCOUNT_NOT_REGISTERED") return "Аккаунт ученика не найден в списке класса.";
   if (error?.message === "STUDENT_CLASS_MISMATCH") return "Этот ученик не добавлен в выбранный класс занятия.";
@@ -523,7 +526,7 @@ function classroomPage() {
   const error = session?.error ? `<div class="classroom-warning"><span>!</span><p>${escapeHtml(session.error)}</p></div>` : "";
   const teacherPanel = state.teacher
     ? `${managementPanel()}<div style="margin-top:18px" class="eyebrow">НОВОЕ ЗАНЯТИЕ</div><h3>Настроить занятие</h3><form id="session-form"><label class="form-field"><span>НАЗВАНИЕ ЗАНЯТИЯ</span><input name="session-title" required maxlength="70" placeholder="Например, Русь при Ярославе Мудром" /></label><label class="form-field"><span>КЛАСС</span><select name="session-class">${Object.entries(state.managed.classes || {}).map(([id, item]) => `<option value="${escapeHtml(id)}">${escapeHtml(item.title)}</option>`).join("") || '<option value="">Без привязки к классу</option>'}</select></label><label class="form-field"><span>УЧЕБНЫЙ МОДУЛЬ</span><select name="session-module">${modules.map((m) => `<option value="${m.id}">${m.number} · ${escapeHtml(m.title)}</option>`).join("")}</select></label><label class="form-field"><span>ФОРМА РАБОТЫ</span><select name="session-work"><option value="test">Тест · базовый уровень</option><option value="test-2">Тест · уверенный уровень</option><option value="crossword">Кроссворд</option><option value="game">Игровая рефлексия</option></select></label><button class="button button-primary button-full" type="submit" ${session?.meta?.status === "open" ? "disabled" : ""}>СОЗДАТЬ ЗАНЯТИЕ <span>→</span></button></form><button class="button button-quiet button-small" data-action="teacher-signout" style="margin-top:12px">ВЫЙТИ ИЗ АККАУНТА</button>`
-    : `<div class="eyebrow">ВХОД ПРЕПОДАВАТЕЛЯ</div><h3>Войдите в аккаунт</h3><p class="small-copy">Аккаунт преподавателя создаётся в Firebase Console; регистрация с сайта отключена.</p><form id="teacher-login-form"><label class="form-field"><span>ПОЧТА</span><input type="email" name="teacher-email" required autocomplete="username" /></label><label class="form-field"><span>ПАРОЛЬ</span><input type="password" name="teacher-password" required autocomplete="current-password" /></label><button class="button button-primary button-full" type="submit">ВОЙТИ <span>→</span></button></form>`;
+    : `<div class="eyebrow">ВХОД ПРЕПОДАВАТЕЛЯ</div><h3>Войдите в аккаунт</h3><p class="small-copy">Введите почту аккаунта или логин, выданный для преподавателя.</p><form id="teacher-login-form"><label class="form-field"><span>ПОЧТА ИЛИ ЛОГИН</span><input name="teacher-email" required autocomplete="username" /></label><label class="form-field"><span>ПАРОЛЬ</span><input type="password" name="teacher-password" required autocomplete="current-password" /></label><button class="button button-primary button-full" type="submit">ВОЙТИ <span>→</span></button></form>`;
   return `${pageHeading("LIVE CLASSROOM / FIREBASE", "Занятие в аудитории", "Создайте занятие, поделитесь кодом или QR-ссылкой и принимайте ответы в реальном времени.")}
     ${error}<div class="classroom-warning"><span>i</span><p>Ученики входят по выданному логину и паролю. Тесты, кроссворды и игры проверяются в браузере; преподаватель видит результаты в реальном времени.</p></div>
     <div class="classroom-grid"><section class="panel classroom-create">${teacherPanel}</section>
@@ -1066,6 +1069,9 @@ root.addEventListener("submit", async (event) => {
     saveProgress(); render(); toast("Профиль сохранён на этом устройстве.");
   }
   if (form.id === "teacher-login-form") {
+    const loginButton = form.querySelector('button[type="submit"]');
+    loginButton.disabled = true;
+    loginButton.textContent = "ПОДКЛЮЧЕНИЕ…";
     try {
       const { signInTeacher } = await import("./firebase-classroom.js");
       state.teacher = await signInTeacher(form.elements["teacher-email"].value, form.elements["teacher-password"].value);
@@ -1081,6 +1087,11 @@ root.addEventListener("submit", async (event) => {
       toast("Вход выполнен.");
     } catch (error) {
       toast(classroomErrorText(error));
+    } finally {
+      if (loginButton.isConnected) {
+        loginButton.disabled = false;
+        loginButton.innerHTML = "ВОЙТИ <span>→</span>";
+      }
     }
     return;
   }

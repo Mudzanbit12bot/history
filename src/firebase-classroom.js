@@ -28,6 +28,7 @@ async function getServices() {
     ]).then(([appSdk, authSdk, databaseSdk]) => {
       const app = appSdk.initializeApp(firebaseConfig);
       return {
+        appSdk,
         auth: authSdk.getAuth(app),
         authSdk,
         database: databaseSdk.getDatabase(app),
@@ -87,7 +88,22 @@ export async function createClassroom({ title, moduleId, moduleTitle, workId, wo
 
 export async function signInTeacher(email, password) {
   const services = await getServices();
-  const credential = await services.authSdk.signInWithEmailAndPassword(services.auth, email.trim(), password);
+  const login = email.trim();
+  const candidates = login.includes("@")
+    ? [login]
+    : [login, `${login}@history.local`];
+  let credential;
+  let lastError;
+  for (const candidate of candidates) {
+    try {
+      credential = await services.authSdk.signInWithEmailAndPassword(services.auth, candidate, password);
+      break;
+    } catch (error) {
+      lastError = error;
+      if (!["auth/invalid-credential", "auth/user-not-found", "auth/invalid-email", "auth/wrong-password"].includes(error?.code)) throw error;
+    }
+  }
+  if (!credential) throw lastError;
   const role = credential.user.uid === ADMIN_UID ? "admin" : credential.user.uid === TEACHER_UID ? "teacher" : "student";
   return { uid: credential.user.uid, email: credential.user.email, role };
 }
